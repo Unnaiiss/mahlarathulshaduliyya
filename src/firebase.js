@@ -66,7 +66,8 @@ const defaultEventData = {
   posters: [
     "/uroos_poster.png",
     "/uroos_gathering.png"
-  ]
+  ],
+  heroBgImage: "/spiritual_gathering.png"
 };
 
 const defaultGalleryData = [
@@ -204,9 +205,25 @@ const seedEventData = async (db, storage) => {
       uploadedPosters.push(downloadUrl);
     }
 
+    let seededHeroBgImage = defaultEventData.heroBgImage;
+    if (seededHeroBgImage && seededHeroBgImage.startsWith('/')) {
+      try {
+        const response = await fetch(seededHeroBgImage);
+        const blob = await response.blob();
+        const filename = seededHeroBgImage.substring(1);
+        const file = new File([blob], filename, { type: blob.type });
+        const storageRef = ref(storage, `hero/seeded_${Date.now()}_${filename}`);
+        const uploadResult = await uploadBytes(storageRef, file);
+        seededHeroBgImage = await getDownloadURL(uploadResult.ref);
+      } catch (err) {
+        console.error("Error seeding default hero background image:", err);
+      }
+    }
+
     const seededData = {
       ...defaultEventData,
-      posters: uploadedPosters
+      posters: uploadedPosters,
+      heroBgImage: seededHeroBgImage
     };
 
     await setDoc(doc(db, "settings", "event"), seededData);

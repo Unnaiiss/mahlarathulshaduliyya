@@ -162,7 +162,7 @@ export default function App() {
               <Route path="/" element={
                 <>
                   {/* Hero Section */}
-                  <Hero />
+                  <Hero eventData={eventData} />
 
                   {/* Features & Objectives Section */}
                   <Features />

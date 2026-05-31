@@ -61,6 +61,9 @@ export default function Admin({
   const [eventAbout, setEventAbout] = useState(eventData.about || '');
   const [eventPosters, setEventPosters] = useState(eventData.posters || []);
   const [eventNewFiles, setEventNewFiles] = useState([]); // holds { file, previewUrl }
+  const [eventHeroBg, setEventHeroBg] = useState(eventData?.heroBgImage || '');
+  const [eventHeroBgFile, setEventHeroBgFile] = useState(null);
+  const [eventHeroBgPreview, setEventHeroBgPreview] = useState('');
   const [isEventSaving, setIsEventSaving] = useState(false);
   const [eventSaveSuccess, setEventSaveSuccess] = useState(false);
 
@@ -107,6 +110,9 @@ export default function Admin({
       setEventYoutubeId(eventData.youtubeId);
       setEventAbout(eventData.about || '');
       setEventPosters(eventData.posters || []);
+      setEventHeroBg(eventData.heroBgImage || '');
+      setEventHeroBgFile(null);
+      setEventHeroBgPreview('');
     }
   }, [eventData]);
 
@@ -227,6 +233,25 @@ export default function Admin({
     setEventNewFiles(prev => prev.filter(f => f.previewUrl !== posterToRemove));
   };
 
+  const handleHeroBgImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setEventHeroBgFile(file);
+      setEventHeroBgPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleRemoveHeroBgPreview = () => {
+    setEventHeroBgFile(null);
+    setEventHeroBgPreview('');
+  };
+
+  const handleClearHeroBg = () => {
+    setEventHeroBg('');
+    setEventHeroBgFile(null);
+    setEventHeroBgPreview('');
+  };
+
   const handleGalleryImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -254,6 +279,12 @@ export default function Admin({
       const uploadPromises = eventNewFiles.map(item => uploadImage(item.file, "events"));
       const newlyUploadedUrls = await Promise.all(uploadPromises);
 
+      // 2b. Upload new Hero Background Image if present
+      let heroBgUrl = eventHeroBg;
+      if (eventHeroBgFile) {
+        heroBgUrl = await uploadImage(eventHeroBgFile, "hero");
+      }
+
       // 3. Save combined array back to Firestore
       const finalPostersList = [...existingUrls, ...newlyUploadedUrls];
 
@@ -263,11 +294,14 @@ export default function Admin({
         location: eventLocation,
         youtubeId: eventYoutubeId,
         about: eventAbout,
-        posters: finalPostersList
+        posters: finalPostersList,
+        heroBgImage: heroBgUrl
       });
 
       // Reset local file queues
       setEventNewFiles([]);
+      setEventHeroBgFile(null);
+      setEventHeroBgPreview('');
       setEventSaveSuccess(true);
       setTimeout(() => setEventSaveSuccess(false), 3000);
     } catch (error) {
@@ -843,6 +877,75 @@ export default function Admin({
                 className="w-full px-4 py-2.5 rounded border border-gray-300 focus:border-accent-gold focus:outline-none text-sm transition-all bg-white resize-y"
                 placeholder="Provide event details, description, schedule summaries..."
               />
+            </div>
+
+            {/* Hero Background Image Uploader */}
+            <div className="flex flex-col gap-2 border-t border-gray-150 pt-6">
+              <label className="text-xs font-bold tracking-wider text-charcoal uppercase flex items-center justify-between">
+                <span>Hero Section Background Image</span>
+                {(eventHeroBg || eventHeroBgPreview) && (
+                  <button
+                    type="button"
+                    onClick={handleClearHeroBg}
+                    className="text-[10px] text-red-650 hover:text-red-700 font-bold uppercase tracking-wider transition-colors"
+                  >
+                    Clear Image (Use Fallback White Theme)
+                  </button>
+                )}
+              </label>
+              <p className="text-[11px] text-mediumgray -mt-1 leading-relaxed">
+                Add an immersive background photo to the landing screen. An overlay will automatically protect text legibility.
+              </p>
+              
+              {eventHeroBgPreview || eventHeroBg ? (
+                <div className="relative rounded-lg border border-gray-200 overflow-hidden aspect-[21/9] bg-gray-100 max-w-xl group">
+                  <img
+                    src={eventHeroBgPreview || eventHeroBg}
+                    alt="Hero Background Preview"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-3">
+                    <label className="p-2 bg-white text-charcoal rounded-full hover:bg-gray-100 cursor-pointer shadow transition-all hover:scale-105">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleHeroBgImageUpload}
+                        className="hidden"
+                      />
+                      <Upload className="w-4 h-4" />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={eventHeroBgPreview ? handleRemoveHeroBgPreview : handleClearHeroBg}
+                      className="p-2 bg-red-650 text-white rounded-full hover:bg-red-750 shadow transition-all hover:scale-105"
+                      title={eventHeroBgPreview ? "Cancel upload" : "Clear background image"}
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  {eventHeroBgPreview && (
+                    <div className="absolute bottom-2 left-2 px-2 py-0.5 bg-accent-gold text-white text-[9px] font-bold tracking-widest uppercase rounded">
+                      New Pending Upload
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="border-2 border-dashed border-gray-300 hover:border-accent-gold rounded-lg p-6 flex flex-col items-center justify-center transition-all bg-gray-50 relative cursor-pointer group max-w-xl">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleHeroBgImageUpload}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <Upload className="w-7 h-7 text-mediumgray group-hover:text-accent-gold transition-colors mb-2" />
+                  <span className="text-xs font-semibold text-charcoal mb-0.5">
+                    Click or Drag Image to Upload Hero Cover
+                  </span>
+                  <span className="text-[10px] text-mediumgray">
+                    Recommended ratio: 16:9 or wider (JPG, PNG).
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Event Images Uploader */}

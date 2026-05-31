@@ -2,7 +2,9 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, BookOpen, Compass } from 'lucide-react';
 
-export default function Hero() {
+export default function Hero({ eventData }) {
+  const heroBgImage = eventData?.heroBgImage;
+
   // Stagger animation container
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -31,34 +33,57 @@ export default function Hero() {
   return (
     <section 
       id="home" 
-      className="relative min-h-[90vh] flex items-center justify-center pt-24 pb-16 overflow-hidden bg-white"
+      className={`relative min-h-[90vh] flex items-center justify-center pt-24 pb-16 overflow-hidden transition-colors duration-550 ${
+        heroBgImage ? 'bg-[#111827] text-white' : 'bg-white text-charcoal'
+      }`}
     >
-      {/* 95% White Background with Subtle Radial Glow & Arabesque Grid */}
+      {/* Background Media Container */}
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-        {/* Soft Gold Radial Glow */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[700px] h-[700px] rounded-full bg-accent-saffron/[0.04] blur-[120px] pointer-events-none" />
-        <div className="absolute bottom-0 right-10 w-[500px] h-[500px] rounded-full bg-accent-gold/[0.03] blur-[100px] pointer-events-none" />
+        {heroBgImage ? (
+          <>
+            {/* Immersive Image with Ken Burns animation */}
+            <img 
+              src={heroBgImage} 
+              alt="Foundation Sanctuary Background" 
+              className="absolute inset-0 w-full h-full object-cover origin-center scale-105 animate-subtle-drift" 
+            />
+            {/* Sleek Radial & Linear Dark Contrast Protection Overlays */}
+            <div className="absolute inset-0 bg-[#111827]/60" />
+            <div className="absolute inset-0 bg-gradient-to-b from-[#111827]/75 via-[#111827]/45 to-[#111827]/85" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(17,24,39,0.1)_0%,rgba(17,24,39,0.85)_80%)]" />
+          </>
+        ) : (
+          <>
+            {/* Soft Gold Radial Glow for clean white style */}
+            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[700px] h-[700px] rounded-full bg-accent-saffron/[0.04] blur-[120px] pointer-events-none" />
+            <div className="absolute bottom-0 right-10 w-[500px] h-[500px] rounded-full bg-accent-gold/[0.03] blur-[100px] pointer-events-none" />
+          </>
+        )}
         
         {/* Drifting Arabesque Grid Lines Overlay */}
         <motion.div 
           animate={{ 
-            x: [0, 10, -10, 0],
-            y: [0, -10, 10, 0] 
+            x: [0, 8, -8, 0],
+            y: [0, -8, 8, 0] 
           }}
           transition={{
-            duration: 25,
+            duration: 30,
             repeat: Infinity,
             ease: "easeInOut"
           }}
-          className="absolute inset-0 bg-arabesque-pattern opacity-[0.4] pointer-events-none" 
+          className={`absolute inset-0 bg-arabesque-pattern pointer-events-none transition-opacity duration-500 ${
+            heroBgImage ? 'opacity-[0.08]' : 'opacity-[0.4]'
+          }`} 
         />
         
-        {/* Subtle geometric framing line */}
-        <div className="absolute left-6 right-6 top-24 bottom-6 border border-accent-gold/[0.05] pointer-events-none hidden md:block">
-          <div className="absolute top-0 left-0 w-4 h-4 border-t border-l border-accent-gold/20" />
-          <div className="absolute top-0 right-0 w-4 h-4 border-t border-r border-accent-gold/20" />
-          <div className="absolute bottom-0 left-0 w-4 h-4 border-b border-l border-accent-gold/20" />
-          <div className="absolute bottom-0 right-0 w-4 h-4 border-b border-r border-accent-gold/20" />
+        {/* Geometric framing line */}
+        <div className={`absolute left-6 right-6 top-24 bottom-6 border pointer-events-none hidden md:block transition-colors duration-500 ${
+          heroBgImage ? 'border-white/10' : 'border-accent-gold/[0.05]'
+        }`}>
+          <div className={`absolute top-0 left-0 w-4 h-4 border-t border-l ${heroBgImage ? 'border-white/20' : 'border-accent-gold/20'}`} />
+          <div className={`absolute top-0 right-0 w-4 h-4 border-t border-r ${heroBgImage ? 'border-white/20' : 'border-accent-gold/20'}`} />
+          <div className={`absolute bottom-0 left-0 w-4 h-4 border-b border-l ${heroBgImage ? 'border-white/20' : 'border-accent-gold/20'}`} />
+          <div className={`absolute bottom-0 right-0 w-4 h-4 border-b border-r ${heroBgImage ? 'border-white/20' : 'border-accent-gold/20'}`} />
         </div>
       </div>
 
@@ -73,10 +98,16 @@ export default function Hero() {
           {/* Subheading */}
           <motion.div 
             variants={itemVariants}
-            className="inline-flex items-center gap-2 mb-6 px-3 sm:px-4 py-1.5 rounded-lg sm:rounded-full bg-accent-light border border-accent-gold/15 max-w-full"
+            className={`inline-flex items-center gap-2 mb-6 px-3 sm:px-4 py-1.5 rounded-lg sm:rounded-full max-w-full transition-all duration-500 ${
+              heroBgImage 
+                ? 'bg-white/10 backdrop-blur-md border border-white/15' 
+                : 'bg-accent-light border border-accent-gold/15'
+            }`}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-accent-gold animate-pulse shrink-0" />
-            <span className="text-[10px] sm:text-[11px] font-semibold tracking-wider sm:tracking-[0.25em] uppercase text-accent-gold text-center">
+            <span className={`text-[10px] sm:text-[11px] font-semibold tracking-wider sm:tracking-[0.25em] uppercase text-center transition-colors duration-500 ${
+              heroBgImage ? 'text-white' : 'text-accent-gold'
+            }`}>
               Bridging Sacred Tradition with Modern Innovation
             </span>
           </motion.div>
@@ -84,7 +115,9 @@ export default function Hero() {
           {/* Main Academic Title */}
           <motion.h1 
             variants={itemVariants}
-            className="text-2xl min-[360px]:text-[28px] min-[400px]:text-3xl min-[480px]:text-4xl sm:text-5xl md:text-6xl font-bold font-serif text-charcoal tracking-tight leading-[1.15] max-w-4xl mb-6"
+            className={`text-2xl min-[360px]:text-[28px] min-[400px]:text-3xl min-[480px]:text-4xl sm:text-5xl md:text-6xl font-bold font-serif tracking-tight leading-[1.15] max-w-4xl mb-6 transition-colors duration-500 ${
+              heroBgImage ? 'text-white' : 'text-charcoal'
+            }`}
           >
             MAHLARATUSHADULIYYA <br />
             <span className="text-gradient-gold font-normal italic">CULTURAL FOUNDATION</span>
@@ -93,7 +126,9 @@ export default function Hero() {
           {/* Elegant Tagline */}
           <motion.p 
             variants={itemVariants}
-            className="text-lg sm:text-xl font-serif italic text-mediumgray max-w-2xl mb-12 relative"
+            className={`text-lg sm:text-xl font-serif italic max-w-2xl mb-12 relative transition-colors duration-500 ${
+              heroBgImage ? 'text-white/85' : 'text-mediumgray'
+            }`}
           >
             "Preserving Legacy. Empowering Futures."
             <span className="block w-12 h-[1px] bg-accent-gold/30 mx-auto mt-6" />
@@ -115,7 +150,11 @@ export default function Hero() {
             
             <a 
               href="#features"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded bg-transparent border border-accent-gold text-accent-gold font-medium text-sm tracking-widest uppercase hover:bg-accent-light transition-all duration-300 hover:-translate-y-0.5"
+              className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded bg-transparent border font-medium text-sm tracking-widest uppercase transition-all duration-300 hover:-translate-y-0.5 ${
+                heroBgImage 
+                  ? 'border-white text-white hover:bg-white/10' 
+                  : 'border-accent-gold text-accent-gold hover:bg-accent-light'
+              }`}
             >
               <Compass className="w-4 h-4" />
               <span>Our Vision</span>
@@ -125,7 +164,7 @@ export default function Hero() {
           {/* Arabic Typography Graphic Element (Elegant backdrop overlay) */}
           <motion.div 
             initial={{ opacity: 0 }}
-            animate={{ opacity: 0.04 }}
+            animate={{ opacity: heroBgImage ? 0.05 : 0.04 }}
             transition={{ delay: 1, duration: 2 }}
             className="absolute -bottom-12 left-1/2 -translate-x-1/2 font-arabic text-[120px] select-none pointer-events-none text-accent-gold whitespace-nowrap hidden lg:block"
           >
