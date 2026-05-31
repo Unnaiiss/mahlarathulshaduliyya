@@ -1,0 +1,49 @@
+@import "tailwindcss";
+@config "../tailwind.config.js";
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-white text-charcoal font-sans antialiased overflow-x-hidden;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif text-charcoal;
+  }
+}
+
+/* Custom premium styles */
+.text-gradient-gold {
+  background: linear-gradient(135deg, #B49646 0%, #F4A261 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Minimal arabesque background pattern */
+.bg-arabesque-pattern {
+  background-size: 60px 60px;
+  background-image: 
+    linear-gradient(to right, rgba(180, 150, 70, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(180, 150, 70, 0.03) 1px, transparent 1px);
+}
+
+/* Elegant geometric grid overlap */
+.gold-glow {
+  filter: drop-shadow(0 0 15px rgba(244, 162, 97, 0.15));
+}
+
+/* Custom minimal scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #ffffff;
+}
+::-webkit-scrollbar-thumb {
+  background: #E5E7EB;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #B49646;
+}
