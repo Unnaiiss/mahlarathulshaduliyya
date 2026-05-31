@@ -5,8 +5,8 @@ import { Menu, X, Globe, ChevronRight } from 'lucide-react';
 
 const navLinks = [
   { name: 'Home', href: '#home' },
-  { name: 'Features', href: '#features' },
-  { name: 'Academics', href: '#academics' },
+  { name: 'About Us', href: '/about' },
+  { name: 'Academics', href: '/academics' },
   { name: 'Gallery', href: '#gallery' },
   { name: 'Contact', href: '#contact' },
 ];
@@ -17,16 +17,29 @@ export default function Navbar() {
   const location = useLocation();
 
   const handleNavClick = (e, href) => {
-    if (location.pathname !== '/') {
-      e.preventDefault();
-      navigate('/');
-      // Delay slightly to allow homepage mounting before scroll
-      setTimeout(() => {
+    if (href.startsWith('#')) {
+      if (location.pathname !== '/') {
+        e.preventDefault();
+        navigate('/');
+        // Delay slightly to allow homepage mounting before scroll
+        setTimeout(() => {
+          const element = document.querySelector(href);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 120);
+      } else {
+        e.preventDefault();
         const element = document.querySelector(href);
         if (element) {
           element.scrollIntoView({ behavior: 'smooth' });
         }
-      }, 100);
+      }
+    } else {
+      // Internal page route
+      e.preventDefault();
+      navigate(href);
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     }
   };
 
@@ -43,29 +56,13 @@ export default function Navbar() {
             }}
             className="flex items-center gap-1.5 min-[360px]:gap-2 sm:gap-3 cursor-pointer"
           >
-            {/* Logo Monogram Placeholder (SVG calligraphic gold mark) */}
-            <div className="relative w-8 h-8 min-[360px]:w-9 min-[360px]:h-9 sm:w-11 sm:h-11 flex items-center justify-center rounded-full border border-accent-gold/40 bg-accent-light p-1 shrink-0">
-              <svg 
-                viewBox="0 0 100 100" 
-                className="w-full h-full text-accent-gold" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2.5"
-              >
-                {/* Arabesque geometric medallion */}
-                <circle cx="50" cy="50" r="45" strokeDasharray="3 3" className="opacity-60" />
-                <polygon points="50,15 80,75 20,75" strokeWidth="1.5" className="opacity-50" />
-                <polygon points="50,85 80,25 20,25" strokeWidth="1.5" className="opacity-50" />
-                {/* Central elegant Arabic-inspired monogram character/shape */}
-                <path 
-                  d="M40 65 C 40 45, 50 35, 50 35 C 50 35, 60 45, 60 65" 
-                  strokeWidth="3.5" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                />
-                <circle cx="50" cy="30" r="3" fill="currentColor" />
-                <path d="M30 50 Q 50 60 70 50" strokeWidth="1.5" />
-              </svg>
+            {/* Brand Logo */}
+            <div className="relative w-8 h-8 min-[360px]:w-9 min-[360px]:h-9 sm:w-11 sm:h-11 flex items-center justify-center rounded-full overflow-hidden border border-accent-gold/20 bg-accent-light shrink-0">
+              <img 
+                src="/logo.png" 
+                alt="Mahlaratushaduliyya Logo" 
+                className="w-full h-full object-contain"
+              />
             </div>
             
             {/* Typography brand name */}

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Calendar, MapPin } from 'lucide-react';
+import { X, Calendar, MapPin, ArrowRight } from 'lucide-react';
 
 export default function EventBanner({ onViewDetails, eventData }) {
   const [isVisible, setIsVisible] = useState(true);
@@ -55,9 +55,10 @@ export default function EventBanner({ onViewDetails, eventData }) {
             {/* Action button to redirect */}
             <button
               onClick={onViewDetails}
-              className="inline-flex items-center justify-center px-3.5 py-1.5 bg-accent-saffron hover:bg-white text-emerald-950 font-bold transition-all duration-300 text-xs rounded shadow-sm shrink-0 ml-2 md:ml-4"
+              className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-transparent border border-white/70 text-white hover:bg-white/10 hover:-translate-y-0.5 font-semibold transition-all duration-300 text-[11px] tracking-widest uppercase rounded shrink-0 ml-2 md:ml-4"
             >
               View Details
+              <ArrowRight className="w-3 h-3" />
             </button>
 
             {/* Close Button */}

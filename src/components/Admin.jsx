@@ -32,6 +32,7 @@ export default function Admin({
   galleryData, 
   onAddGallery, 
   onDeleteGallery, 
+  onUpdateGalleryItem, 
   contactData,
   onUpdateContact,
   academicsData,
@@ -40,11 +41,15 @@ export default function Admin({
   onAddAcademicWing,
   onDeleteAcademicWing,
   onUpdateAcademicWing,
+  aboutData,
+  onUpdateAbout,
   onLogout 
 }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
+
+  const homeItemsCount = galleryData ? galleryData.filter(item => item.showOnHome).length : 0;
   
   // Auth Form State
   const [loginEmail, setLoginEmail] = useState('');
@@ -60,7 +65,10 @@ export default function Admin({
   const [eventYoutubeId, setEventYoutubeId] = useState(eventData.youtubeId);
   const [eventAbout, setEventAbout] = useState(eventData.about || '');
   const [eventPosters, setEventPosters] = useState(eventData.posters || []);
+  const [eventHomePosters, setEventHomePosters] = useState(eventData.homePosters || []);
   const [eventNewFiles, setEventNewFiles] = useState([]); // holds { file, previewUrl }
+  const [eventHighlights, setEventHighlights] = useState(eventData.highlights || []);
+  const [eventHighlightFiles, setEventHighlightFiles] = useState([]); // holds { file, previewUrl }
   const [eventHeroBg, setEventHeroBg] = useState(eventData?.heroBgImage || '');
   const [eventHeroBgFile, setEventHeroBgFile] = useState(null);
   const [eventHeroBgPreview, setEventHeroBgPreview] = useState('');
@@ -81,6 +89,25 @@ export default function Admin({
   const [academicsDescription, setAcademicsDescription] = useState(academicsConfig?.description || '');
   const [isAcademicsConfigSaving, setIsAcademicsConfigSaving] = useState(false);
   const [academicsConfigSaveSuccess, setAcademicsConfigSaveSuccess] = useState(false);
+
+  // Local state for About Form
+  const [aboutStory, setAboutStory] = useState(aboutData?.story || '');
+  const [aboutMission, setAboutMission] = useState(aboutData?.mission || '');
+  const [aboutVision, setAboutVision] = useState(aboutData?.vision || '');
+  const [aboutPillars, setAboutPillars] = useState(aboutData?.pillars || []);
+  const [aboutMilestones, setAboutMilestones] = useState(aboutData?.milestones || []);
+
+  // Temp form inputs for adding new items
+  const [newPillarTitle, setNewPillarTitle] = useState('');
+  const [newPillarDesc, setNewPillarDesc] = useState('');
+  const [newPillarIcon, setNewPillarIcon] = useState('book');
+
+  const [newMilestoneYear, setNewMilestoneYear] = useState('');
+  const [newMilestoneTitle, setNewMilestoneTitle] = useState('');
+  const [newMilestoneDesc, setNewMilestoneDesc] = useState('');
+
+  const [isAboutSaving, setIsAboutSaving] = useState(false);
+  const [aboutSaveSuccess, setAboutSaveSuccess] = useState(false);
 
   const [newWingName, setNewWingName] = useState('');
   const [newWingFocus, setNewWingFocus] = useState('');
@@ -110,6 +137,8 @@ export default function Admin({
       setEventYoutubeId(eventData.youtubeId);
       setEventAbout(eventData.about || '');
       setEventPosters(eventData.posters || []);
+      setEventHomePosters(eventData.homePosters || []);
+      setEventHighlights(eventData.highlights || []);
       setEventHeroBg(eventData.heroBgImage || '');
       setEventHeroBgFile(null);
       setEventHeroBgPreview('');
@@ -134,6 +163,17 @@ export default function Admin({
       setAcademicsDescription(academicsConfig.description || '');
     }
   }, [academicsConfig]);
+
+  // Update form inputs when aboutData loaded from DB changes
+  useEffect(() => {
+    if (aboutData) {
+      setAboutStory(aboutData.story || '');
+      setAboutMission(aboutData.mission || '');
+      setAboutVision(aboutData.vision || '');
+      setAboutPillars(aboutData.pillars || []);
+      setAboutMilestones(aboutData.milestones || []);
+    }
+  }, [aboutData]);
 
   const handleLinkInstagram = (e) => {
     e.preventDefault();
@@ -229,8 +269,34 @@ export default function Admin({
   const handleRemoveEventPoster = (indexToRemove) => {
     const posterToRemove = eventPosters[indexToRemove];
     setEventPosters(prev => prev.filter((_, idx) => idx !== indexToRemove));
-    // Clear from new upload queue if it was pending
     setEventNewFiles(prev => prev.filter(f => f.previewUrl !== posterToRemove));
+    setEventHomePosters(prev => prev.filter(url => url !== posterToRemove));
+  };
+
+  const handleToggleHomePoster = (posterUrl) => {
+    setEventHomePosters(prev => {
+      if (prev.includes(posterUrl)) {
+        return prev.filter(url => url !== posterUrl);
+      } else {
+        return [...prev, posterUrl];
+      }
+    });
+  };
+
+  // Homepage Highlights Upload
+  const handleHighlightImageUpload = (e) => {
+    const files = Array.from(e.target.files);
+    files.forEach(file => {
+      const previewUrl = URL.createObjectURL(file);
+      setEventHighlightFiles(prev => [...prev, { file, previewUrl }]);
+      setEventHighlights(prev => [...prev, previewUrl]);
+    });
+  };
+
+  const handleRemoveHighlight = (indexToRemove) => {
+    const imgToRemove = eventHighlights[indexToRemove];
+    setEventHighlights(prev => prev.filter((_, idx) => idx !== indexToRemove));
+    setEventHighlightFiles(prev => prev.filter(f => f.previewUrl !== imgToRemove));
   };
 
   const handleHeroBgImageUpload = (e) => {
@@ -273,20 +339,35 @@ export default function Admin({
 
     try {
       // 1. Separate existing online URLs from local preview blobs/data URLs
-      const existingUrls = eventPosters.filter(p => !p.startsWith('blob:') && !p.startsWith('data:'));
+      const existingPosterUrls = eventPosters.filter(p => !p.startsWith('blob:') && !p.startsWith('data:'));
+      const existingHighlightUrls = eventHighlights.filter(p => !p.startsWith('blob:') && !p.startsWith('data:'));
 
-      // 2. Upload any new files to Cloud Storage
-      const uploadPromises = eventNewFiles.map(item => uploadImage(item.file, "events"));
-      const newlyUploadedUrls = await Promise.all(uploadPromises);
+      // 2. Upload new poster files
+      const posterUploadPromises = eventNewFiles.map(item => uploadImage(item.file, "events"));
+      const newPosterUrls = await Promise.all(posterUploadPromises);
 
-      // 2b. Upload new Hero Background Image if present
+      // Map local preview URLs to their uploaded public URLs
+      const urlMapping = {};
+      eventNewFiles.forEach((item, index) => {
+        urlMapping[item.previewUrl] = newPosterUrls[index];
+      });
+
+      const finalPosters = [...existingPosterUrls, ...newPosterUrls];
+      
+      // Map check-state home posters to their uploaded public URLs (or keep as-is if existing)
+      const finalHomePosters = eventHomePosters
+        .map(url => urlMapping[url] || url)
+        .filter(url => finalPosters.includes(url));
+
+      // 3. Upload new highlight files
+      const highlightUploadPromises = eventHighlightFiles.map(item => uploadImage(item.file, "highlights"));
+      const newHighlightUrls = await Promise.all(highlightUploadPromises);
+
+      // 4. Upload new Hero Background Image if present
       let heroBgUrl = eventHeroBg;
       if (eventHeroBgFile) {
         heroBgUrl = await uploadImage(eventHeroBgFile, "hero");
       }
-
-      // 3. Save combined array back to Firestore
-      const finalPostersList = [...existingUrls, ...newlyUploadedUrls];
 
       await onUpdateEvent({
         title: eventTitle,
@@ -294,12 +375,15 @@ export default function Admin({
         location: eventLocation,
         youtubeId: eventYoutubeId,
         about: eventAbout,
-        posters: finalPostersList,
+        posters: finalPosters,
+        homePosters: finalHomePosters,
+        highlights: [...existingHighlightUrls, ...newHighlightUrls],
         heroBgImage: heroBgUrl
       });
 
       // Reset local file queues
       setEventNewFiles([]);
+      setEventHighlightFiles([]);
       setEventHeroBgFile(null);
       setEventHeroBgPreview('');
       setEventSaveSuccess(true);
@@ -332,6 +416,64 @@ export default function Admin({
     } finally {
       setIsContactSaving(false);
     }
+  };
+
+  // Save About Us details to database
+  const handleSaveAbout = async (e) => {
+    e.preventDefault();
+    setIsAboutSaving(true);
+    setAboutSaveSuccess(false);
+    try {
+      await onUpdateAbout({
+        story: aboutStory,
+        mission: aboutMission,
+        vision: aboutVision,
+        pillars: aboutPillars,
+        milestones: aboutMilestones
+      });
+      setAboutSaveSuccess(true);
+      setTimeout(() => setAboutSaveSuccess(false), 3000);
+    } catch (error) {
+      alert("Failed to save about details: " + error.message);
+    } finally {
+      setIsAboutSaving(false);
+    }
+  };
+
+  const handleAddPillar = (e) => {
+    e.preventDefault();
+    if (!newPillarTitle.trim() || !newPillarDesc.trim()) return;
+    const newPillar = {
+      title: newPillarTitle,
+      desc: newPillarDesc,
+      icon: newPillarIcon
+    };
+    setAboutPillars(prev => [...prev, newPillar]);
+    setNewPillarTitle('');
+    setNewPillarDesc('');
+    setNewPillarIcon('book');
+  };
+
+  const handleRemovePillar = (idxToRemove) => {
+    setAboutPillars(prev => prev.filter((_, idx) => idx !== idxToRemove));
+  };
+
+  const handleAddMilestone = (e) => {
+    e.preventDefault();
+    if (!newMilestoneYear.trim() || !newMilestoneTitle.trim() || !newMilestoneDesc.trim()) return;
+    const newMilestone = {
+      year: newMilestoneYear,
+      title: newMilestoneTitle,
+      description: newMilestoneDesc
+    };
+    setAboutMilestones(prev => [...prev, newMilestone]);
+    setNewMilestoneYear('');
+    setNewMilestoneTitle('');
+    setNewMilestoneDesc('');
+  };
+
+  const handleRemoveMilestone = (idxToRemove) => {
+    setAboutMilestones(prev => prev.filter((_, idx) => idx !== idxToRemove));
   };
 
   // Save Academics Config description
@@ -426,7 +568,8 @@ export default function Admin({
         id: Date.now().toString(), // local mock id (Firestore will assign its own doc key)
         title: newGalleryTitle,
         description: newGalleryDesc,
-        image: mediaUrl
+        image: mediaUrl,
+        showOnHome: false
       });
 
       // 3. Clear form states
@@ -480,13 +623,13 @@ export default function Admin({
         <div className="max-w-md w-full space-y-8 bg-[#111827] border border-gray-800 p-8 sm:p-10 rounded-lg shadow-xl relative z-10 text-left">
           
           <div className="text-center flex flex-col items-center">
-            {/* Medallion */}
-            <div className="w-16 h-16 rounded-full border border-accent-gold/40 flex items-center justify-center p-2.5 bg-white/5 mb-6 shadow-md">
-              <svg viewBox="0 0 100 100" className="w-full h-full text-accent-gold" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <circle cx="50" cy="50" r="45" strokeDasharray="3 3" className="opacity-60" />
-                <path d="M40 65 C 40 45, 50 35, 50 35 C 50 35, 60 45, 60 65" strokeWidth="3.5" strokeLinecap="round" />
-                <circle cx="50" cy="30" r="3" fill="currentColor" />
-              </svg>
+            {/* Brand Logo */}
+            <div className="w-16 h-16 rounded-full border border-accent-gold/20 flex items-center justify-center overflow-hidden bg-white/5 mb-6 shadow-md">
+              <img 
+                src="/logo.png" 
+                alt="Mahlaratushaduliyya Logo" 
+                className="w-full h-full object-contain"
+              />
             </div>
             
             <h2 className="text-2xl font-serif font-bold text-white tracking-wide">
@@ -599,11 +742,12 @@ export default function Admin({
         
         {/* Sidebar Header */}
         <div className="p-6 border-b border-gray-800 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full border border-accent-gold/40 flex items-center justify-center p-1 bg-white/5 shrink-0">
-            <svg viewBox="0 0 100 100" className="w-full h-full text-accent-gold" fill="none" stroke="currentColor" strokeWidth="3.5">
-              <circle cx="50" cy="50" r="45" strokeDasharray="3 3" />
-              <path d="M40 65 C 40 45, 50 35, 50 35 C 50 35, 60 45, 60 65" strokeLinecap="round" />
-            </svg>
+          <div className="w-8 h-8 rounded-full border border-accent-gold/20 flex items-center justify-center overflow-hidden bg-white/5 shrink-0">
+            <img 
+              src="/logo.png" 
+              alt="Mahlaratushaduliyya Logo" 
+              className="w-full h-full object-contain"
+            />
           </div>
           <div className="flex flex-col text-left">
             <span className="font-serif text-sm tracking-wider font-semibold text-white">MCF Control</span>
@@ -675,6 +819,22 @@ export default function Admin({
             <Mail className="w-4 h-4" />
             <span>Manage Contact & Socials</span>
           </button>
+
+          <button
+            onClick={() => setActiveTab('about')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded text-sm font-medium tracking-wide transition-all duration-200 ${
+              activeTab === 'about' 
+                ? 'bg-accent-gold text-white shadow-sm' 
+                : 'text-gray-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="16" x2="12" y2="12" />
+              <line x1="12" y1="8" x2="12.01" y2="8" />
+            </svg>
+            <span>Manage About Us</span>
+          </button>
         </nav>
 
         {/* Sidebar Footer Actions */}
@@ -714,6 +874,7 @@ export default function Admin({
               {activeTab === 'gallery' && "Upload media archives, add heritage documents, or delete posts."}
               {activeTab === 'academics' && "Manage educational wings, admissions status, and academics description."}
               {activeTab === 'contact' && "Configure organization address, phone, email, and social networks."}
+              {activeTab === 'about' && "Edit About Us story timeline narratives, mission statement, and vision statements."}
             </p>
           </div>
           <div className="text-xs text-mediumgray bg-white border border-gray-200 px-3 py-1.5 rounded shadow-sm shrink-0">
@@ -953,6 +1114,9 @@ export default function Admin({
               <label className="text-xs font-bold tracking-wider text-charcoal uppercase">
                 Upload Event Posters & Photos
               </label>
+              <p className="text-[11px] text-mediumgray -mt-1 leading-relaxed">
+                These images appear in both the <strong>homepage slideshow</strong> and the <strong>event details page</strong>.
+              </p>
               <div className="border-2 border-dashed border-gray-300 hover:border-accent-gold rounded-lg p-6 flex flex-col items-center justify-center transition-all bg-gray-50 relative cursor-pointer group">
                 <input
                   type="file"
@@ -994,7 +1158,7 @@ export default function Admin({
                 </button>
               </div>
               {instagramError && (
-                <span className="text-xs text-red-600 font-semibold mt-1">
+                <span className="text-xs text-red-650 font-semibold mt-1">
                   {instagramError}
                 </span>
               )}
@@ -1007,47 +1171,62 @@ export default function Admin({
                   Posters & Highlights Queue ({eventPosters.length})
                 </span>
                 <div className="border border-gray-100 p-4 rounded-lg bg-gray-50/50">
-                  <div className="flex flex-wrap gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                     {eventPosters.map((poster, index) => {
                       const instagramId = getInstagramPostId(poster);
+                      const isShowingOnHome = eventHomePosters.includes(poster);
                       return (
-                        <div key={index} className="w-20 h-24 rounded border border-gray-200 relative overflow-hidden bg-white shrink-0 group flex flex-col items-center justify-center text-center p-1">
-                          {instagramId ? (
-                            <>
-                              <svg 
-                                viewBox="0 0 24 24" 
-                                fill="none" 
-                                stroke="currentColor" 
-                                strokeWidth="2" 
-                                strokeLinecap="round" 
-                                strokeLinejoin="round" 
-                                className="w-6 h-6 text-[#E1306C] mb-1 shrink-0 animate-pulse"
-                              >
-                                <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
-                                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-                                <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
-                              </svg>
-                              <span className="text-[9px] font-bold text-charcoal truncate w-full px-1">
-                                {instagramId}
-                              </span>
-                              <span className="text-[7px] text-mediumgray uppercase tracking-widest font-semibold mt-0.5">
-                                Instagram
-                              </span>
-                            </>
-                          ) : (
-                            <img
-                              src={poster}
-                              alt={`Poster ${index}`}
-                              className="w-full h-full object-cover"
+                        <div key={index} className="border border-gray-200 rounded-lg p-2 bg-white flex flex-col justify-between group transition-all duration-200 hover:shadow-md hover:border-accent-gold/50">
+                          <div className="relative aspect-[4/5] w-full rounded overflow-hidden bg-gray-50 flex flex-col items-center justify-center text-center p-1">
+                            {instagramId ? (
+                              <>
+                                <svg 
+                                  viewBox="0 0 24 24" 
+                                  fill="none" 
+                                  stroke="currentColor" 
+                                  strokeWidth="2" 
+                                  strokeLinecap="round" 
+                                  strokeLinejoin="round" 
+                                  className="w-8 h-8 text-[#E1306C] mb-1.5 shrink-0"
+                                >
+                                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+                                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                                  <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+                                </svg>
+                                <span className="text-[10px] font-bold text-charcoal truncate w-full px-1">
+                                  {instagramId}
+                                </span>
+                                <span className="text-[8px] text-mediumgray uppercase tracking-widest font-semibold mt-1">
+                                  Instagram
+                                </span>
+                              </>
+                            ) : (
+                              <img
+                                src={poster}
+                                alt={`Poster ${index}`}
+                                className="w-full h-full object-cover"
+                              />
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveEventPoster(index)}
+                              className="absolute inset-0 bg-red-600/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer"
+                            >
+                              <Trash2 className="w-5 h-5" />
+                            </button>
+                          </div>
+                          
+                          <label className={`flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider select-none cursor-pointer mt-2.5 ${
+                            isShowingOnHome ? 'text-accent-gold' : 'text-gray-400 hover:text-charcoal'
+                          }`}>
+                            <input
+                              type="checkbox"
+                              checked={isShowingOnHome}
+                              onChange={() => handleToggleHomePoster(poster)}
+                              className="rounded border-gray-300 text-accent-gold focus:ring-accent-gold w-3.5 h-3.5 cursor-pointer"
                             />
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveEventPoster(index)}
-                            className="absolute inset-0 bg-red-600/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                            <span>Show on Home</span>
+                          </label>
                         </div>
                       );
                     })}
@@ -1291,13 +1470,33 @@ export default function Admin({
                     </div>
 
                     {/* Details */}
-                    <div className="flex-grow min-w-0">
-                      <h4 className="text-sm font-serif font-bold text-charcoal truncate mb-1">
-                        {item.title}
-                      </h4>
-                      <p className="text-xs text-mediumgray line-clamp-2 leading-relaxed">
-                        {item.description}
-                      </p>
+                    <div className="flex-grow min-w-0 flex flex-col justify-between">
+                      <div>
+                        <h4 className="text-sm font-serif font-bold text-charcoal truncate mb-1">
+                          {item.title}
+                        </h4>
+                        <p className="text-xs text-mediumgray line-clamp-2 leading-relaxed mb-2">
+                          {item.description}
+                        </p>
+                      </div>
+
+                      {/* Homepage Toggle Checkbox */}
+                      <label className={`flex items-center gap-1.5 text-[10px] font-semibold select-none cursor-pointer w-fit ${
+                        !item.showOnHome && homeItemsCount >= 2 
+                          ? 'text-gray-300 cursor-not-allowed' 
+                          : item.showOnHome 
+                          ? 'text-accent-gold' 
+                          : 'text-gray-400 hover:text-charcoal'
+                      }`}>
+                        <input
+                          type="checkbox"
+                          checked={!!item.showOnHome}
+                          disabled={!item.showOnHome && homeItemsCount >= 2}
+                          onChange={(e) => onUpdateGalleryItem(item.id, { showOnHome: e.target.checked })}
+                          className="rounded border-gray-300 text-accent-gold focus:ring-accent-gold w-3.5 h-3.5 cursor-pointer"
+                        />
+                        <span>Show on Homepage {item.showOnHome ? '(Active)' : ''}</span>
+                      </label>
                     </div>
 
                     {/* Actions */}
@@ -1617,6 +1816,321 @@ export default function Admin({
                   ))}
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 6: MANAGE ABOUT US */}
+        {activeTab === 'about' && (
+          <div className="space-y-8 animate-fade-in-slow text-left">
+            {/* Core narratives Story, Mission, Vision form */}
+            <form onSubmit={handleSaveAbout} className="bg-white p-8 rounded border border-gray-200 shadow-sm space-y-6 max-w-3xl">
+              <h2 className="text-xl font-serif font-semibold text-charcoal border-b border-gray-100 pb-3 mb-4">
+                About Us Core Narratives
+              </h2>
+
+              {/* Our Story */}
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold tracking-wider text-charcoal uppercase">
+                  Our Story / Historical Background
+                </label>
+                <textarea
+                  value={aboutStory}
+                  onChange={(e) => setAboutStory(e.target.value)}
+                  required
+                  rows="6"
+                  className="w-full px-4 py-2.5 rounded border border-gray-300 focus:border-accent-gold focus:outline-none text-sm transition-all bg-white resize-y"
+                  placeholder="Provide the foundation's history, legacy, and background story..."
+                />
+              </div>
+
+              {/* Our Mission & Vision Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {/* Our Mission */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-bold tracking-wider text-charcoal uppercase">
+                    Our Mission Statement
+                  </label>
+                  <textarea
+                    value={aboutMission}
+                    onChange={(e) => setAboutMission(e.target.value)}
+                    required
+                    rows="4"
+                    className="w-full px-4 py-2.5 rounded border border-gray-300 focus:border-accent-gold focus:outline-none text-sm transition-all bg-white resize-y"
+                    placeholder="Provide the foundation's current mission description..."
+                  />
+                </div>
+
+                {/* Our Vision */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-bold tracking-wider text-charcoal uppercase">
+                    Our Vision Statement
+                  </label>
+                  <textarea
+                    value={aboutVision}
+                    onChange={(e) => setAboutVision(e.target.value)}
+                    required
+                    rows="4"
+                    className="w-full px-4 py-2.5 rounded border border-gray-300 focus:border-accent-gold focus:outline-none text-sm transition-all bg-white resize-y"
+                    placeholder="Provide the long-term vision goal..."
+                  />
+                </div>
+              </div>
+
+              {/* Save Button for Narratives, Pillars and Milestones */}
+              <div className="pt-4 border-t border-gray-100 flex items-center gap-4">
+                <button
+                  type="submit"
+                  disabled={isAboutSaving}
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded bg-accent-gold hover:bg-accent-saffron disabled:bg-accent-gold/40 text-white text-xs font-bold tracking-widest uppercase shadow transition-all cursor-pointer"
+                >
+                  {isAboutSaving ? (
+                     <>
+                       <Loader2 className="w-4 h-4 animate-spin" />
+                       <span>Saving...</span>
+                     </>
+                  ) : (
+                    <span>Save About Us Narratives</span>
+                  )}
+                </button>
+
+                {aboutSaveSuccess && (
+                  <span className="inline-flex items-center gap-1 text-xs text-emerald-600 font-semibold animate-fade-in-slow">
+                    <Check className="w-4 h-4" />
+                    <span>About details updated successfully!</span>
+                  </span>
+                )}
+              </div>
+            </form>
+
+            {/* Core Pillars Editor Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-5xl">
+              {/* Form to Add Core Pillar */}
+              <div className="lg:col-span-5 bg-white p-6 rounded border border-gray-200 shadow-sm self-start">
+                <h2 className="text-lg font-serif font-semibold text-charcoal border-b border-gray-100 pb-3 mb-6">
+                  Add Core Pillar
+                </h2>
+
+                <form onSubmit={handleAddPillar} className="space-y-4">
+                  {/* Pillar Title */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold tracking-wider text-charcoal uppercase">
+                      Pillar Title
+                    </label>
+                    <input
+                      type="text"
+                      value={newPillarTitle}
+                      onChange={(e) => setNewPillarTitle(e.target.value)}
+                      required
+                      className="w-full px-3 py-2 rounded border border-gray-300 focus:border-accent-gold focus:outline-none text-xs transition-all bg-white"
+                      placeholder="e.g., Sacred Preservation"
+                    />
+                  </div>
+
+                  {/* Description */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold tracking-wider text-charcoal uppercase">
+                      Description
+                    </label>
+                    <textarea
+                      value={newPillarDesc}
+                      onChange={(e) => setNewPillarDesc(e.target.value)}
+                      required
+                      rows="3"
+                      className="w-full px-3 py-2 rounded border border-gray-300 focus:border-accent-gold focus:outline-none text-xs transition-all bg-white resize-y"
+                      placeholder="Describe what this pillar represents..."
+                    />
+                  </div>
+
+                  {/* Icon shape selection dropdown */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold tracking-wider text-charcoal uppercase">
+                      Icon Representation
+                    </label>
+                    <select
+                      value={newPillarIcon}
+                      onChange={(e) => setNewPillarIcon(e.target.value)}
+                      className="w-full px-3 py-2 rounded border border-gray-300 focus:border-accent-gold focus:outline-none text-xs transition-all bg-white"
+                    >
+                      <option value="book">Book (Sacred / Preservation)</option>
+                      <option value="quill">Quill (Scholarship / Rigor)</option>
+                      <option value="spiritual">Spiritual (Flame / Remembrances)</option>
+                      <option value="globe">Globe (Modern Access / Outreach)</option>
+                    </select>
+                  </div>
+
+                  {/* Submit Button */}
+                  <div className="pt-2 flex items-center gap-3">
+                    <button
+                      type="submit"
+                      className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded bg-accent-gold hover:bg-accent-saffron text-white text-[10px] font-bold tracking-widest uppercase shadow transition-all cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add Pillar</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              {/* List of active pillars */}
+              <div className="lg:col-span-7 bg-white p-6 rounded border border-gray-200 shadow-sm">
+                <h2 className="text-lg font-serif font-semibold text-charcoal border-b border-gray-100 pb-3 mb-6">
+                  Active Pillars ({aboutPillars.length})
+                </h2>
+
+                <div className="space-y-4">
+                  {aboutPillars.map((p, idx) => (
+                    <div 
+                      key={idx}
+                      className="flex gap-4 p-4 border border-gray-150 rounded hover:bg-gray-50/50 transition-colors items-start"
+                    >
+                      <div className="w-10 h-10 rounded bg-accent-light border border-accent-gold/25 flex items-center justify-center shrink-0 text-accent-gold font-bold uppercase text-[10px]">
+                        {p.icon}
+                      </div>
+                      <div className="flex-grow min-w-0">
+                        <h4 className="text-sm font-serif font-bold text-charcoal mb-1">
+                          {p.title}
+                        </h4>
+                        <p className="text-xs text-mediumgray leading-relaxed">
+                          {p.desc}
+                        </p>
+                      </div>
+                      <div className="shrink-0 flex items-center mt-1">
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePillar(idx)}
+                          className="p-2 text-gray-400 hover:text-red-650 hover:bg-red-50 rounded transition-colors"
+                          title="Remove Pillar"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {aboutPillars.length === 0 && (
+                    <p className="text-xs text-mediumgray italic text-center py-6">No pillars configured. Click save once you add pillars.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Milestones / Timeline Editor Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-5xl">
+              {/* Form to Add Milestone */}
+              <div className="lg:col-span-5 bg-white p-6 rounded border border-gray-200 shadow-sm self-start">
+                <h2 className="text-lg font-serif font-semibold text-charcoal border-b border-gray-100 pb-3 mb-6">
+                  Add Milestone
+                </h2>
+
+                <form onSubmit={handleAddMilestone} className="space-y-4">
+                  {/* Year */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold tracking-wider text-charcoal uppercase">
+                      Milestone Year
+                    </label>
+                    <input
+                      type="text"
+                      value={newMilestoneYear}
+                      onChange={(e) => setNewMilestoneYear(e.target.value)}
+                      required
+                      className="w-full px-3 py-2 rounded border border-gray-300 focus:border-accent-gold focus:outline-none text-xs transition-all bg-white"
+                      placeholder="e.g., 2001 or 2026"
+                    />
+                  </div>
+
+                  {/* Title */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold tracking-wider text-charcoal uppercase">
+                      Milestone Title
+                    </label>
+                    <input
+                      type="text"
+                      value={newMilestoneTitle}
+                      onChange={(e) => setNewMilestoneTitle(e.target.value)}
+                      required
+                      className="w-full px-3 py-2 rounded border border-gray-300 focus:border-accent-gold focus:outline-none text-xs transition-all bg-white"
+                      placeholder="e.g., Spiritual Legacy Begun"
+                    />
+                  </div>
+
+                  {/* Description */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold tracking-wider text-charcoal uppercase">
+                      Description
+                    </label>
+                    <textarea
+                      value={newMilestoneDesc}
+                      onChange={(e) => setNewMilestoneDesc(e.target.value)}
+                      required
+                      rows="3"
+                      className="w-full px-3 py-2 rounded border border-gray-300 focus:border-accent-gold focus:outline-none text-xs transition-all bg-white resize-y"
+                      placeholder="Describe what occurred in this year..."
+                    />
+                  </div>
+
+                  {/* Submit Button */}
+                  <div className="pt-2 flex items-center gap-3">
+                    <button
+                      type="submit"
+                      className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded bg-accent-gold hover:bg-accent-saffron text-white text-[10px] font-bold tracking-widest uppercase shadow transition-all cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add Milestone</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              {/* List of active milestones */}
+              <div className="lg:col-span-7 bg-white p-6 rounded border border-gray-200 shadow-sm">
+                <h2 className="text-lg font-serif font-semibold text-charcoal border-b border-gray-100 pb-3 mb-6">
+                  Active Timeline Milestones ({aboutMilestones.length})
+                </h2>
+
+                <div className="space-y-4">
+                  {aboutMilestones.map((m, idx) => (
+                    <div 
+                      key={idx}
+                      className="flex gap-4 p-4 border border-gray-150 rounded hover:bg-gray-50/50 transition-colors items-start"
+                    >
+                      <span className="px-2.5 py-1 rounded bg-accent-gold text-white font-serif font-bold text-xs shadow-sm shrink-0">
+                        {m.year}
+                      </span>
+                      <div className="flex-grow min-w-0">
+                        <h4 className="text-sm font-serif font-bold text-charcoal mb-1">
+                          {m.title}
+                        </h4>
+                        <p className="text-xs text-mediumgray leading-relaxed">
+                          {m.description}
+                        </p>
+                      </div>
+                      <div className="shrink-0 flex items-center mt-1">
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveMilestone(idx)}
+                          className="p-2 text-gray-400 hover:text-red-650 hover:bg-red-50 rounded transition-colors"
+                          title="Remove Milestone"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {aboutMilestones.length === 0 && (
+                    <p className="text-xs text-mediumgray italic text-center py-6">No milestones configured. Click save once you add milestones.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Direct Save Reminder Alert */}
+            <div className="max-w-3xl p-4 bg-amber-50 border border-amber-200 rounded text-amber-900 text-xs flex gap-2">
+              <svg className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <span>
+                <strong>Note:</strong> Adding or removing pillars/milestones updates the local list queue. You <strong>must</strong> click the <strong>"Save About Us Narratives"</strong> button at the top to write these changes to the live database.
+              </span>
             </div>
           </div>
         )}

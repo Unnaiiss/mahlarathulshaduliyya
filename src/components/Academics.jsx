@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowUpRight } from 'lucide-react';
 
@@ -24,6 +25,13 @@ const defaultAcademicsData = [
 ];
 
 export default function Academics({ academicsData, academicsConfig }) {
+  const navigate = useNavigate();
+
+  // Scroll to top when page mounts
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   const displayData = academicsData && academicsData.length > 0 ? academicsData : defaultAcademicsData;
   const description = academicsConfig?.description || "Hosting premier educational institutes dedicated to deep research, intellectual preservation, and spiritual proficiency.";
   const containerVariants = {
@@ -50,12 +58,30 @@ export default function Academics({ academicsData, academicsConfig }) {
   return (
     <section 
       id="academics" 
-      className="py-24 bg-white border-t border-gray-100 relative overflow-hidden"
+      className="pt-28 pb-24 bg-[#FDFBF7] relative overflow-hidden min-h-[85vh]"
     >
       {/* Background Ornament */}
       <div className="absolute bottom-0 left-0 w-[300px] h-[300px] rounded-full bg-accent-light/35 blur-[70px] pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-6 lg:px-12 relative z-10">
+        
+        {/* Navigation Breadcrumb Back */}
+        <motion.button 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          onClick={() => {
+            navigate('/');
+            window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+          }} 
+          className="inline-flex items-center gap-2.5 text-[11px] font-bold tracking-widest text-accent-gold uppercase hover:text-accent-saffron transition-all mb-8 group"
+        >
+          <svg viewBox="0 0 24 24" className="w-4 h-4 text-accent-gold group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+          <span>Back to Home</span>
+        </motion.button>
         
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-20">

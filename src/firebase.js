@@ -67,6 +67,15 @@ const defaultEventData = {
     "/uroos_poster.png",
     "/uroos_gathering.png"
   ],
+  homePosters: [
+    "/uroos_poster.png",
+    "/uroos_gathering.png"
+  ],
+  highlights: [
+    "/uroos_poster.png",
+    "/uroos_gathering.png",
+    "/spiritual_gathering.png"
+  ],
   heroBgImage: "/spiritual_gathering.png"
 };
 
@@ -76,18 +85,21 @@ const defaultGalleryData = [
     title: 'The Living History',
     description: "Archival photos and biographical highlights of Kerala's historical scholars.",
     image: '/scholar_heritage.png',
+    showOnHome: true,
   },
   {
     id: "2",
     title: 'Preserving the Written Word',
     description: 'Glimpses of rare Kitabs and historical manuscripts digitized for our library.',
     image: '/rare_manuscripts.png',
+    showOnHome: true,
   },
   {
     id: "3",
     title: 'Mahlara in Action',
     description: 'Capturing the spiritual essence, prayers, and community gatherings.',
     image: '/spiritual_gathering.png',
+    showOnHome: false,
   },
 ];
 
@@ -98,6 +110,61 @@ const defaultContactData = {
   instagram: "https://instagram.com/",
   youtube: "https://youtube.com/",
   facebook: "https://facebook.com/"
+};
+
+const defaultAboutData = {
+  story: "Founded under the spiritual guidance of C.P. Ustad, the Mahlaratushaduliyya Cultural Foundation has stood as a beacon of sacred learning, research, and community guidance in Avilora for over two decades. Our journey began with a simple commitment: to preserve the classical teachings of Islam while empowering students to engage productively with the contemporary world.\n\nThrough dedicated academies of study, we continue to cultivate deep theological inquiry and traditional sciences, fostering a generation of scholars who bridge sacred tradition with modern innovation. Our programs focus on textual preservation, spiritual refinement, and intellectual leadership.",
+  mission: "To preserve and digitize our rich cultural and manuscript heritage, provide rigorous and accessible theological education through specialized academic wings, and cultivate a community of spiritual proficiency and service.",
+  vision: "To become a globally recognized center for Islamic legacy preservation, academic research, and spiritual elevation, cultivating intellectual depth and sacred proficiency.",
+  pillars: [
+    {
+      title: "Sacred Preservation",
+      desc: "Digitizing, archiving, and translating classical manuscripts and classical theological works to safeguard cultural heritage.",
+      icon: "book"
+    },
+    {
+      title: "Intellectual Rigor",
+      desc: "Nurturing deep scholarship, traditional tafseer research, and religious precision across our specialized academy wings.",
+      icon: "quill"
+    },
+    {
+      title: "Spiritual Cultivation",
+      desc: "Enriching community life through assemblies of prayer, educational Uroos conventions, and collective remembrance.",
+      icon: "spiritual"
+    },
+    {
+      title: "Modern Accessibility",
+      desc: "Developing online learning setups, real-time broadcasts, and digitizing files to make sacred wisdom accessible.",
+      icon: "globe"
+    }
+  ],
+  milestones: [
+    {
+      year: '2001',
+      title: 'Spiritual Legacy Begun',
+      description: 'Under the supervision and guidance of C.P. Ustad, the initial lectures and educational assemblies were established in Avilora, planting the seeds of Islamic scholarship.'
+    },
+    {
+      year: '2006',
+      title: 'Foundation Incorporation',
+      description: 'The Mahlaratushaduliyya Cultural Foundation was officially established as a centralized body to manage cultural preservation and community welfare.'
+    },
+    {
+      year: '2014',
+      title: 'Academy Wings Launched',
+      description: 'Inauguration of the specialized Academies of Quran Studies and Cultural Research, structuring traditional sciences into rigorous educational paths.'
+    },
+    {
+      year: '2021',
+      title: 'Digital Preservation Program',
+      description: 'Initiated the digitization of historical manuscripts, archiving rare Kitabs, and offering global community broadcasts.'
+    },
+    {
+      year: '2026',
+      title: '25th Uroos Mubarak Jubilee',
+      description: 'Celebrating 25 years of educational excellence, community elevation, and spiritual preservation with global academic assemblies.'
+    }
+  ]
 };
 
 const defaultAcademicsConfig = {
@@ -132,6 +199,7 @@ const mockAuthListeners = [];
 const mockContactListeners = [];
 const mockAcademicsListeners = [];
 const mockAcademicsConfigListeners = [];
+const mockAboutListeners = [];
 
 // Helper to notify Mock state updates
 const notifyEventSubscribers = () => {
@@ -154,6 +222,11 @@ const notifyAcademicsSubscribers = () => {
   mockAcademicsListeners.forEach(cb => cb(currentData));
 };
 
+const notifyAboutSubscribers = () => {
+  const currentData = getMockAboutData();
+  mockAboutListeners.forEach(cb => cb(currentData));
+};
+
 const notifyAcademicsConfigSubscribers = () => {
   const currentData = getMockAcademicsConfigData();
   mockAcademicsConfigListeners.forEach(cb => cb(currentData));
@@ -161,7 +234,20 @@ const notifyAcademicsConfigSubscribers = () => {
 
 const getMockEventData = () => {
   const data = localStorage.getItem('mcf_event');
-  return data ? JSON.parse(data) : defaultEventData;
+  if (data) {
+    const parsed = JSON.parse(data);
+    if (parsed.heroBgImage === undefined) {
+      parsed.heroBgImage = defaultEventData.heroBgImage;
+    }
+    if (parsed.highlights === undefined) {
+      parsed.highlights = defaultEventData.highlights;
+    }
+    if (parsed.homePosters === undefined) {
+      parsed.homePosters = parsed.posters || defaultEventData.homePosters;
+    }
+    return parsed;
+  }
+  return defaultEventData;
 };
 
 const getMockGalleryData = () => {
@@ -182,6 +268,20 @@ const getMockAcademicsConfigData = () => {
 const getMockAcademicsData = () => {
   const data = localStorage.getItem('mcf_academics');
   return data ? JSON.parse(data) : defaultAcademicsData;
+};
+
+const getMockAboutData = () => {
+  const data = localStorage.getItem('mcf_about');
+  if (data) {
+    const parsed = JSON.parse(data);
+    if (parsed.story === undefined) parsed.story = defaultAboutData.story;
+    if (parsed.mission === undefined) parsed.mission = defaultAboutData.mission;
+    if (parsed.vision === undefined) parsed.vision = defaultAboutData.vision;
+    if (parsed.pillars === undefined) parsed.pillars = defaultAboutData.pillars;
+    if (parsed.milestones === undefined) parsed.milestones = defaultAboutData.milestones;
+    return parsed;
+  }
+  return defaultAboutData;
 };
 
 // ----------------------------------------------------
@@ -223,6 +323,7 @@ const seedEventData = async (db, storage) => {
     const seededData = {
       ...defaultEventData,
       posters: uploadedPosters,
+      homePosters: uploadedPosters,
       heroBgImage: seededHeroBgImage
     };
 
@@ -254,7 +355,8 @@ const seedGalleryData = async (db, storage) => {
       const firebaseData = {
         title: item.title,
         description: item.description,
-        image: downloadUrl
+        image: downloadUrl,
+        showOnHome: item.showOnHome || false
       };
 
       const docRef = await addDoc(collection(db, "gallery"), firebaseData);
@@ -381,7 +483,17 @@ export const subscribeToEvent = (callback) => {
   if (isFirebaseConfigured && dbInstance) {
     return onSnapshot(doc(dbInstance, "settings", "event"), (snapshot) => {
       if (snapshot.exists()) {
-        callback(snapshot.data());
+        const data = snapshot.data();
+        if (data.heroBgImage === undefined) {
+          data.heroBgImage = defaultEventData.heroBgImage;
+        }
+        if (data.highlights === undefined) {
+          data.highlights = defaultEventData.highlights;
+        }
+        if (data.homePosters === undefined) {
+          data.homePosters = data.posters || defaultEventData.homePosters;
+        }
+        callback(data);
       } else {
         // Initialize doc in firebase if it doesn't exist by seeding it
         seedEventData(dbInstance, storageInstance).then(callback);
@@ -460,6 +572,21 @@ export const deleteGalleryItem = async (id) => {
     list = list.filter(item => item.id !== id);
     localStorage.setItem('mcf_gallery', JSON.stringify(list));
     notifyGallerySubscribers();
+    return true;
+  }
+};
+
+export const updateGalleryItem = async (id, updatedData) => {
+  if (isFirebaseConfigured && dbInstance) {
+    return setDoc(doc(dbInstance, "gallery", id), updatedData, { merge: true });
+  } else {
+    const list = getMockGalleryData();
+    const idx = list.findIndex(item => item.id === id);
+    if (idx !== -1) {
+      list[idx] = { ...list[idx], ...updatedData };
+      localStorage.setItem('mcf_gallery', JSON.stringify(list));
+      notifyGallerySubscribers();
+    }
     return true;
   }
 };
@@ -631,6 +758,48 @@ export const updateAcademicWing = async (id, updatedItem) => {
     list = list.map(item => item.id === id ? { ...item, ...updatedItem } : item);
     localStorage.setItem('mcf_academics', JSON.stringify(list));
     notifyAcademicsSubscribers();
+    return true;
+  }
+};
+
+// ABOUT US NARRATIVES
+
+export const subscribeToAbout = (callback) => {
+  if (isFirebaseConfigured && dbInstance) {
+    return onSnapshot(doc(dbInstance, "settings", "about"), (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        if (data.story === undefined) data.story = defaultAboutData.story;
+        if (data.mission === undefined) data.mission = defaultAboutData.mission;
+        if (data.vision === undefined) data.vision = defaultAboutData.vision;
+        if (data.pillars === undefined) data.pillars = defaultAboutData.pillars;
+        if (data.milestones === undefined) data.milestones = defaultAboutData.milestones;
+        callback(data);
+      } else {
+        setDoc(doc(dbInstance, "settings", "about"), defaultAboutData).then(() => {
+          callback(defaultAboutData);
+        });
+      }
+    }, (error) => {
+      console.error("Firestore About Subscription error:", error);
+      callback(defaultAboutData);
+    });
+  } else {
+    mockAboutListeners.push(callback);
+    callback(getMockAboutData());
+    return () => {
+      const idx = mockAboutListeners.indexOf(callback);
+      if (idx !== -1) mockAboutListeners.splice(idx, 1);
+    };
+  }
+};
+
+export const updateAbout = async (data) => {
+  if (isFirebaseConfigured && dbInstance) {
+    return setDoc(doc(dbInstance, "settings", "about"), data);
+  } else {
+    localStorage.setItem('mcf_about', JSON.stringify(data));
+    notifyAboutSubscribers();
     return true;
   }
 };

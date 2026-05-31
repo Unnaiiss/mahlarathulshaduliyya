@@ -5,12 +5,14 @@ import Hero from './components/Hero';
 import Features from './components/Features';
 import Academics from './components/Academics';
 import EventBanner from './components/EventBanner';
+import EventHighlights from './components/EventHighlights';
 import { 
   subscribeToEvent, 
   subscribeToGallery, 
   updateEvent, 
   addGalleryItem, 
   deleteGalleryItem,
+  updateGalleryItem,
   subscribeToContact,
   updateContact,
   subscribeToAcademicsConfig,
@@ -18,7 +20,9 @@ import {
   subscribeToAcademics,
   addAcademicWing,
   deleteAcademicWing,
-  updateAcademicWing
+  updateAcademicWing,
+  subscribeToAbout,
+  updateAbout
 } from './firebase';
 
 // Lazy load below-the-fold components and page views
@@ -27,6 +31,7 @@ const Footer = lazy(() => import('./components/Footer'));
 const EventDetails = lazy(() => import('./components/EventDetails'));
 const Admin = lazy(() => import('./components/Admin'));
 const MediaGallery = lazy(() => import('./components/MediaGallery'));
+const AboutUs = lazy(() => import('./components/AboutUs'));
 
 // Sleek loading fallback spinner matching the design system
 function LoadingPlaceholder() {
@@ -49,6 +54,7 @@ export default function App() {
   const [contactData, setContactData] = useState(null);
   const [academicsData, setAcademicsData] = useState([]);
   const [academicsConfig, setAcademicsConfig] = useState(null);
+  const [aboutData, setAboutData] = useState(null);
   const navigate = useNavigate();
 
   // Listen to Firebase Real-time updates (or LocalStorage Mock updates)
@@ -68,6 +74,9 @@ export default function App() {
     const unsubscribeAcademics = subscribeToAcademics((data) => {
       setAcademicsData(data);
     });
+    const unsubscribeAbout = subscribeToAbout((data) => {
+      setAboutData(data);
+    });
 
     return () => {
       unsubscribeEvent();
@@ -75,11 +84,12 @@ export default function App() {
       unsubscribeContact();
       unsubscribeAcademicsConfig();
       unsubscribeAcademics();
+      unsubscribeAbout();
     };
   }, []);
 
   // Show placeholder while fetching initial state from DB
-  if (!eventData || !contactData || !academicsConfig) {
+  if (!eventData || !contactData || !academicsConfig || !aboutData) {
     return <LoadingPlaceholder />;
   }
 
@@ -94,6 +104,10 @@ export default function App() {
 
   const handleDeleteGalleryItem = async (id) => {
     await deleteGalleryItem(id);
+  };
+
+  const handleUpdateGalleryItem = async (id, updatedData) => {
+    await updateGalleryItem(id, updatedData);
   };
 
   const handleUpdateContact = async (updatedData) => {
@@ -116,6 +130,10 @@ export default function App() {
     await updateAcademicWing(id, updatedWing);
   };
 
+  const handleUpdateAbout = async (updatedData) => {
+    await updateAbout(updatedData);
+  };
+
   return (
     <Routes>
       {/* Admin Panel Route (Fullscreen layout, fully decoupled from user styling) */}
@@ -127,6 +145,7 @@ export default function App() {
             galleryData={galleryData}
             onAddGallery={handleAddGalleryItem}
             onDeleteGallery={handleDeleteGalleryItem}
+            onUpdateGalleryItem={handleUpdateGalleryItem}
             contactData={contactData}
             onUpdateContact={handleUpdateContact}
             academicsData={academicsData}
@@ -135,6 +154,8 @@ export default function App() {
             onAddAcademicWing={handleAddAcademicWing}
             onDeleteAcademicWing={handleDeleteAcademicWing}
             onUpdateAcademicWing={handleUpdateAcademicWing}
+            aboutData={aboutData}
+            onUpdateAbout={handleUpdateAbout}
             onLogout={() => navigate('/')}
           />
         </Suspense>
@@ -164,11 +185,12 @@ export default function App() {
                   {/* Hero Section */}
                   <Hero eventData={eventData} />
 
+                  {/* Event Posters & Highlights Carousel */}
+                  <EventHighlights eventData={eventData} />
+
                   {/* Features & Objectives Section */}
                   <Features />
 
-                  {/* Academic Wings & Admissions Section */}
-                  <Academics academicsData={academicsData} academicsConfig={academicsConfig} />
 
                   {/* Media & Heritage Gallery Section (Lazy loaded) */}
                   <Suspense fallback={<LoadingPlaceholder />}>
@@ -226,6 +248,18 @@ export default function App() {
                     galleryData={galleryData} 
                   />
                 </Suspense>
+              } />
+
+              {/* Dedicated About Us Page */}
+              <Route path="/about" element={
+                <Suspense fallback={<LoadingPlaceholder />}>
+                  <AboutUs aboutData={aboutData} />
+                </Suspense>
+              } />
+
+              {/* Dedicated Academics Page */}
+              <Route path="/academics" element={
+                <Academics academicsData={academicsData} academicsConfig={academicsConfig} />
               } />
             </Routes>
           </main>

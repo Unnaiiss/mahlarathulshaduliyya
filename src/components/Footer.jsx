@@ -30,12 +30,13 @@ export default function Footer({ contactData }) {
           {/* Column 1: Brand (Takes 5 cols on md+) */}
           <div className="md:col-span-5 flex flex-col">
             <div className="flex items-center gap-3 mb-6">
-              {/* Logo Monogram */}
-              <div className="w-10 h-10 rounded-full border border-accent-gold/40 flex items-center justify-center p-1 bg-white/5">
-                <svg viewBox="0 0 100 100" className="w-full h-full text-accent-gold" fill="none" stroke="currentColor" strokeWidth="3">
-                  <circle cx="50" cy="50" r="45" strokeDasharray="3 3" />
-                  <path d="M40 65 C 40 45, 50 35, 50 35 C 50 35, 60 45, 60 65" strokeLinecap="round" />
-                </svg>
+              {/* Brand Logo */}
+              <div className="w-10 h-10 rounded-full border border-accent-gold/20 flex items-center justify-center overflow-hidden bg-white/5 shrink-0">
+                <img 
+                  src="/logo.png" 
+                  alt="Mahlaratushaduliyya Logo" 
+                  className="w-full h-full object-contain"
+                />
               </div>
               <div className="flex flex-col text-left">
                 <span className="font-serif text-base tracking-wider font-semibold text-white">

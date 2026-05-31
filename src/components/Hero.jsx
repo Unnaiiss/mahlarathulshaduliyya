@@ -1,9 +1,9 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, BookOpen, Compass } from 'lucide-react';
+import { ArrowRight, BookOpen, Users } from 'lucide-react';
 
 export default function Hero({ eventData }) {
-  const heroBgImage = eventData?.heroBgImage;
+  const heroBgImage = eventData?.heroBgImage !== undefined ? eventData.heroBgImage : "/spiritual_gathering.png";
 
   // Stagger animation container
   const containerVariants = {
@@ -140,7 +140,7 @@ export default function Hero({ eventData }) {
             className="flex flex-col sm:flex-row items-center gap-4 justify-center w-full max-w-sm sm:max-w-none"
           >
             <a 
-              href="#academics"
+              href="#features"
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded bg-accent-gold text-white font-medium text-sm tracking-widest uppercase hover:bg-accent-saffron transition-all duration-300 shadow-sm hover:shadow-lg hover:-translate-y-0.5"
             >
               <BookOpen className="w-4 h-4" />
@@ -149,27 +149,19 @@ export default function Hero({ eventData }) {
             </a>
             
             <a 
-              href="#features"
+              href="/about"
               className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded bg-transparent border font-medium text-sm tracking-widest uppercase transition-all duration-300 hover:-translate-y-0.5 ${
                 heroBgImage 
                   ? 'border-white text-white hover:bg-white/10' 
                   : 'border-accent-gold text-accent-gold hover:bg-accent-light'
               }`}
             >
-              <Compass className="w-4 h-4" />
-              <span>Our Vision</span>
+              <Users className="w-4 h-4" />
+              <span>About Us</span>
             </a>
           </motion.div>
 
-          {/* Arabic Typography Graphic Element (Elegant backdrop overlay) */}
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: heroBgImage ? 0.05 : 0.04 }}
-            transition={{ delay: 1, duration: 2 }}
-            className="absolute -bottom-12 left-1/2 -translate-x-1/2 font-arabic text-[120px] select-none pointer-events-none text-accent-gold whitespace-nowrap hidden lg:block"
-          >
-            المدرسة الشاذلية
-          </motion.div>
+
         </motion.div>
       </div>
 

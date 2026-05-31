@@ -30,7 +30,8 @@ export default function Gallery({ galleryData }) {
   const [activeMedia, setActiveMedia] = useState(null);
   
   const displayData = galleryData && galleryData.length > 0 ? galleryData : defaultGalleryData;
-  const slicedData = displayData.slice(0, 3);
+  const highlightedData = displayData.filter(item => item.showOnHome);
+  const slicedData = (highlightedData.length > 0 ? highlightedData : displayData).slice(0, 2);
 
   // Body scroll locking when lightbox is active
   useEffect(() => {
@@ -121,7 +122,7 @@ export default function Gallery({ galleryData }) {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-60px" }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-8"
+          className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto"
         >
           {slicedData.map((item) => {
             const instagramId = getInstagramPostId(item.image);
