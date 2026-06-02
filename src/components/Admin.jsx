@@ -72,6 +72,9 @@ export default function Admin({
   const [eventHeroBg, setEventHeroBg] = useState(eventData?.heroBgImage || '');
   const [eventHeroBgFile, setEventHeroBgFile] = useState(null);
   const [eventHeroBgPreview, setEventHeroBgPreview] = useState('');
+  const [heroImages, setHeroImages] = useState(eventData?.heroImages || ['', '', '']);
+  const [heroImageFiles, setHeroImageFiles] = useState([null, null, null]);
+  const [heroImagePreviews, setHeroImagePreviews] = useState(['', '', '']);
   const [isEventSaving, setIsEventSaving] = useState(false);
   const [eventSaveSuccess, setEventSaveSuccess] = useState(false);
 
@@ -142,6 +145,9 @@ export default function Admin({
       setEventHeroBg(eventData.heroBgImage || '');
       setEventHeroBgFile(null);
       setEventHeroBgPreview('');
+      setHeroImages(eventData.heroImages || ['', '', '']);
+      setHeroImageFiles([null, null, null]);
+      setHeroImagePreviews(['', '', '']);
     }
   }, [eventData]);
 
@@ -224,6 +230,7 @@ export default function Admin({
       setEventLocation(eventData.location);
       setEventYoutubeId(eventData.youtubeId);
       setEventPosters(eventData.posters || []);
+      setHeroImages(eventData.heroImages || ['', '', '']);
     }
   }, [eventData]);
 
@@ -318,6 +325,54 @@ export default function Admin({
     setEventHeroBgPreview('');
   };
 
+  const handleHeroImageChange = (index, e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const previewUrl = URL.createObjectURL(file);
+      setHeroImageFiles(prev => {
+        const next = [...prev];
+        next[index] = file;
+        return next;
+      });
+      setHeroImagePreviews(prev => {
+        const next = [...prev];
+        next[index] = previewUrl;
+        return next;
+      });
+    }
+  };
+
+  const handleRemoveHeroImagePreview = (index) => {
+    setHeroImageFiles(prev => {
+      const next = [...prev];
+      next[index] = null;
+      return next;
+    });
+    setHeroImagePreviews(prev => {
+      const next = [...prev];
+      next[index] = '';
+      return next;
+    });
+  };
+
+  const handleClearHeroImage = (index) => {
+    setHeroImages(prev => {
+      const next = [...prev];
+      next[index] = '';
+      return next;
+    });
+    setHeroImageFiles(prev => {
+      const next = [...prev];
+      next[index] = null;
+      return next;
+    });
+    setHeroImagePreviews(prev => {
+      const next = [...prev];
+      next[index] = '';
+      return next;
+    });
+  };
+
   const handleGalleryImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -369,6 +424,16 @@ export default function Admin({
         heroBgUrl = await uploadImage(eventHeroBgFile, "hero");
       }
 
+      // 5. Upload new Hero Images if present
+      const finalHeroImages = [...heroImages];
+      const heroUploadPromises = heroImageFiles.map(async (file, idx) => {
+        if (file) {
+          const url = await uploadImage(file, "hero");
+          finalHeroImages[idx] = url;
+        }
+      });
+      await Promise.all(heroUploadPromises);
+
       await onUpdateEvent({
         title: eventTitle,
         dates: eventDates,
@@ -378,7 +443,8 @@ export default function Admin({
         posters: finalPosters,
         homePosters: finalHomePosters,
         highlights: [...existingHighlightUrls, ...newHighlightUrls],
-        heroBgImage: heroBgUrl
+        heroBgImage: heroBgUrl,
+        heroImages: finalHeroImages
       });
 
       // Reset local file queues
@@ -386,6 +452,8 @@ export default function Admin({
       setEventHighlightFiles([]);
       setEventHeroBgFile(null);
       setEventHeroBgPreview('');
+      setHeroImageFiles([null, null, null]);
+      setHeroImagePreviews(['', '', '']);
       setEventSaveSuccess(true);
       setTimeout(() => setEventSaveSuccess(false), 3000);
     } catch (error) {
@@ -1040,10 +1108,86 @@ export default function Admin({
               />
             </div>
 
-            {/* Hero Background Image Uploader */}
+            {/* Hero Section Slideshow Images (3 Photos) */}
+            <div className="flex flex-col gap-3 border-t border-gray-150 pt-6">
+              <label className="text-xs font-bold tracking-wider text-charcoal uppercase block">
+                Hero Section Slideshow Images (3 Photos)
+              </label>
+              <p className="text-[11px] text-mediumgray -mt-1 leading-relaxed">
+                Upload exactly 3 photos that will change automatically every 4 seconds in the hero section carousel.
+              </p>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-3xl">
+                {[0, 1, 2].map((idx) => {
+                  const currentImage = heroImagePreviews[idx] || heroImages[idx];
+                  const hasImage = !!currentImage;
+                  
+                  return (
+                    <div key={idx} className="flex flex-col gap-2">
+                      <span className="text-[11px] font-bold text-mediumgray uppercase">Slide {idx + 1}</span>
+                      
+                      {hasImage ? (
+                        <div className="relative rounded-lg border border-gray-200 overflow-hidden aspect-[4/3] bg-gray-100 group">
+                          <img
+                            src={currentImage}
+                            alt={`Hero Slide ${idx + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-2">
+                            <label className="p-1.5 bg-white text-charcoal rounded-full hover:bg-gray-100 cursor-pointer shadow transition-all hover:scale-105">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handleHeroImageChange(idx, e)}
+                                className="hidden"
+                              />
+                              <Upload className="w-3.5 h-3.5" />
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (heroImagePreviews[idx]) {
+                                  handleRemoveHeroImagePreview(idx);
+                                } else {
+                                  handleClearHeroImage(idx);
+                                }
+                              }}
+                              className="p-1.5 bg-red-650 text-white rounded-full hover:bg-red-750 shadow transition-all hover:scale-105"
+                              title="Clear Slide Image"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                          {heroImagePreviews[idx] && (
+                            <div className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-accent-gold text-white text-[8px] font-bold tracking-widest uppercase rounded">
+                              Pending Upload
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="border border-dashed border-gray-300 hover:border-accent-gold rounded-lg aspect-[4/3] flex flex-col items-center justify-center transition-all bg-gray-50 relative cursor-pointer group">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleHeroImageChange(idx, e)}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          />
+                          <Upload className="w-5 h-5 text-mediumgray group-hover:text-accent-gold transition-colors mb-1" />
+                          <span className="text-[10px] font-semibold text-charcoal text-center px-2">
+                            Click to Upload
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Hero Background Image Uploader (Optional / Backwards Compatible) */}
             <div className="flex flex-col gap-2 border-t border-gray-150 pt-6">
               <label className="text-xs font-bold tracking-wider text-charcoal uppercase flex items-center justify-between">
-                <span>Hero Section Background Image</span>
+                <span>Backup Single Background Image</span>
                 {(eventHeroBg || eventHeroBgPreview) && (
                   <button
                     type="button"
@@ -1055,7 +1199,7 @@ export default function Admin({
                 )}
               </label>
               <p className="text-[11px] text-mediumgray -mt-1 leading-relaxed">
-                Add an immersive background photo to the landing screen. An overlay will automatically protect text legibility.
+                Optional backup background cover image if slideshow is empty.
               </p>
               
               {eventHeroBgPreview || eventHeroBg ? (

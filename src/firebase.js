@@ -76,7 +76,12 @@ const defaultEventData = {
     "/uroos_gathering.png",
     "/spiritual_gathering.png"
   ],
-  heroBgImage: "/spiritual_gathering.png"
+  heroBgImage: "/spiritual_gathering.png",
+  heroImages: [
+    "/spiritual_gathering.png",
+    "/uroos_poster.png",
+    "/uroos_gathering.png"
+  ]
 };
 
 const defaultGalleryData = [
@@ -239,6 +244,9 @@ const getMockEventData = () => {
     if (parsed.heroBgImage === undefined) {
       parsed.heroBgImage = defaultEventData.heroBgImage;
     }
+    if (parsed.heroImages === undefined) {
+      parsed.heroImages = defaultEventData.heroImages;
+    }
     if (parsed.highlights === undefined) {
       parsed.highlights = defaultEventData.highlights;
     }
@@ -320,11 +328,33 @@ const seedEventData = async (db, storage) => {
       }
     }
 
+    const seededHeroImages = [];
+    for (const imagePath of defaultEventData.heroImages || []) {
+      if (imagePath.startsWith('/')) {
+        try {
+          const response = await fetch(imagePath);
+          const blob = await response.blob();
+          const filename = imagePath.substring(1);
+          const file = new File([blob], filename, { type: blob.type });
+          const storageRef = ref(storage, `hero/seeded_${Date.now()}_${filename}`);
+          const uploadResult = await uploadBytes(storageRef, file);
+          const downloadUrl = await getDownloadURL(uploadResult.ref);
+          seededHeroImages.push(downloadUrl);
+        } catch (err) {
+          console.error("Error seeding default hero image:", err);
+          seededHeroImages.push(imagePath);
+        }
+      } else {
+        seededHeroImages.push(imagePath);
+      }
+    }
+
     const seededData = {
       ...defaultEventData,
       posters: uploadedPosters,
       homePosters: uploadedPosters,
-      heroBgImage: seededHeroBgImage
+      heroBgImage: seededHeroBgImage,
+      heroImages: seededHeroImages
     };
 
     await setDoc(doc(db, "settings", "event"), seededData);
@@ -486,6 +516,9 @@ export const subscribeToEvent = (callback) => {
         const data = snapshot.data();
         if (data.heroBgImage === undefined) {
           data.heroBgImage = defaultEventData.heroBgImage;
+        }
+        if (data.heroImages === undefined) {
+          data.heroImages = defaultEventData.heroImages;
         }
         if (data.highlights === undefined) {
           data.highlights = defaultEventData.highlights;
